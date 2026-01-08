@@ -184,7 +184,7 @@
 </head>
 <body>
   <h1>Thinking in Odds</h1>
-  <p class="subtitle">Portfolio of decisions with probabilities</p>
+  <p class="subtitle">Make better decisions by thinking in odds</p>
 
   <!-- Decisions Portfolio -->
   <div class="card">
@@ -254,9 +254,12 @@
     function loadData() {
       const saved = localStorage.getItem('thinkingInOddsDecisions');
       if (saved) decisions = JSON.parse(saved);
-      if (decisions.length === 0) createNewDecision();
       renderDecisionsList();
-      if (decisions.length > 0) selectDecision(0);
+      if (decisions.length === 0) {
+        createNewDecision(); // auto-create first one
+      } else {
+        selectDecision(0);
+      }
     }
 
     function saveData() {
@@ -264,8 +267,8 @@
     }
 
     function createNewDecision() {
-      const name = prompt("Enter a name for your new decision:") || `Decision ${decisions.length + 1}`;
-      decisions.push({ name, factors: [], odds: null });
+      const newName = `New Decision ${decisions.length + 1}`;
+      decisions.push({ name: newName, factors: [], odds: null });
       saveData();
       renderDecisionsList();
       selectDecision(decisions.length - 1);
@@ -363,7 +366,7 @@
       saveData();
       renderFactors();
       updateFactorCount();
-      decisions[currentDecisionIndex].odds = null; // reset odds
+      decisions[currentDecisionIndex].odds = null;
       hideResult();
       renderDecisionsList();
     }
@@ -451,7 +454,7 @@
 
     document.getElementById('decisionName').addEventListener('change', () => {
       if (currentDecisionIndex >= 0) {
-        decisions[currentDecisionIndex].name = document.getElementById('decisionName').value.trim() || "Untitled";
+        decisions[currentDecisionIndex].name = document.getElementById('decisionName').value.trim() || "Untitled Decision";
         saveData();
         renderDecisionsList();
       }
