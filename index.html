@@ -44,10 +44,8 @@
       cursor: pointer;
     }
     .add-btn { background: #3498db; color: white; width: 100%; }
-    .add-btn:active { background: #2980b9; }
     .calc-btn { background: #27ae60; color: white; width: 100%; }
-    .calc-btn:active { background: #219a52; }
-    .new-decision-btn { background: #9b59b6; color: white; width: 100%; margin-top: 0; }
+    .plus-btn { background: #9b59b6; color: white; font-size: 24px; padding: 16px; height: 60px; }
 
     input[type="range"] {
       width: 100%;
@@ -77,7 +75,7 @@
     .toggle-btn.active.for { border-color: #27ae60; background: #27ae60; color: white; }
     .toggle-btn.active.against { border-color: #e74c3c; background: #e74c3c; color: white; }
 
-    /* Fixed Decisions List */
+    /* Decisions List */
     .decision-item {
       padding: 16px;
       border-bottom: 1px solid #eee;
@@ -88,7 +86,6 @@
       border-radius: 8px;
       margin: 4px 0;
     }
-    .decision-item:last-child { border-bottom: none; }
     .decision-item.active {
       background: #3498db;
       color: white;
@@ -96,20 +93,21 @@
     .decision-info {
       flex-grow: 1;
     }
+    .decision-odds {
+      font-size: 18px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
     .delete-decision-btn {
-      background: #e74c3c;
-      color: white;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 14px;
-      min-width: 80px;
+      background: none;
+      color: #e74c3c;
+      font-size: 24px;
+      padding: 8px 12px;
       margin-left: 12px;
     }
-    .decision-item.active .delete-decision-btn {
-      background: #c0392b;
-    }
+    .decision-item.active .delete-decision-btn { color: white; }
 
-    /* Collapsible Factors */
+    /* Collapsible Sections */
     .collapsible-header {
       display: flex;
       justify-content: space-between;
@@ -125,11 +123,11 @@
     }
     .arrow.down { transform: rotate(90deg); }
 
-    .factors-content {
+    .content {
       transition: max-height 0.4s ease;
       overflow: hidden;
     }
-    .factors-content.collapsed {
+    .content.collapsed {
       max-height: 0;
       padding: 0;
       margin: 0;
@@ -192,10 +190,10 @@
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center;">
       <h3 style="margin:0;">Your Decisions</h3>
-      <button class="new-decision-btn" onclick="createNewDecision()">+ New Decision</button>
+      <button class="plus-btn" onclick="createNewDecision()">+</button>
     </div>
     <div id="decisionsList">
-      <p class="empty-message">No decisions yet. Create one!</p>
+      <p class="empty-message">No decisions yet. Tap + to create one!</p>
     </div>
   </div>
 
@@ -203,35 +201,39 @@
   <div id="editorSection" style="display:none;">
     <div class="card">
       <input type="text" id="decisionName" placeholder="Edit decision name" />
-
-      <h3 style="margin-bottom:0;">Add Factor</h3>
-      <input type="text" id="factorName" placeholder="Factor name" />
-
-      <div class="toggle-group">
-        <button class="toggle-btn active for" onclick="setDirection('for')">For</button>
-        <button class="toggle-btn against" onclick="setDirection('against')">Against</button>
-      </div>
-
-      <label style="font-size:14px; color:#7f8c8d;">Strength: <span id="sliderValue">50</span>%</label>
-      <input type="range" id="likelihood" min="0" max="100" value="50" oninput="updateSlider()" />
-
-      <input type="number" id="weight" placeholder="Weight (optional, default 1.0)" min="0" step="0.1" />
-
-      <button class="add-btn" onclick="addFactor()">Add Factor</button>
-      <button class="calc-btn" onclick="calculateOdds()">Calculate Odds</button>
     </div>
 
-    <!-- Factors List -->
+    <!-- Factors Section -->
     <div class="card">
-      <div class="collapsible-header" onclick="toggleFactors()">
+      <div class="collapsible-header" onclick="toggleFactorsList()">
         <span>Factors (<span id="factorCount">0</span>)</span>
-        <span class="arrow" id="arrow">▶</span>
+        <span class="arrow" id="factorsArrow">▶</span>
       </div>
-      <div class="factors-content" id="factorsContent">
+      <div class="content" id="factorsContent">
         <div id="factorsList">
-          <p class="empty-message">No factors yet. Add one above!</p>
+          <p class="empty-message">No factors yet. Tap + below to add one!</p>
+        </div>
+        <!-- Add Factor Button -->
+        <button class="plus-btn" onclick="toggleAddForm()">+ Add Factor</button>
+
+        <!-- Add Factor Form (collapsed by default) -->
+        <div class="content collapsed" id="addFormContent">
+          <input type="text" id="factorName" placeholder="Factor name" />
+          <div class="toggle-group">
+            <button class="toggle-btn active for" onclick="setDirection('for')">For</button>
+            <button class="toggle-btn against" onclick="setDirection('against')">Against</button>
+          </div>
+          <label style="font-size:14px; color:#7f8c8d;">Strength: <span id="sliderValue">50</span>%</label>
+          <input type="range" id="likelihood" min="0" max="100" step="5" value="50" oninput="updateSlider()" />
+          <input type="number" id="weight" placeholder="Weight (optional, default 1.0)" min="0" step="0.1" />
+          <button class="add-btn" onclick="addFactor()">Add Factor</button>
         </div>
       </div>
+    </div>
+
+    <!-- Calculate Button -->
+    <div class="card">
+      <button class="calc-btn" onclick="calculateOdds()">Calculate Odds</button>
     </div>
 
     <!-- Result -->
@@ -246,20 +248,15 @@
     let decisions = [];
     let currentDecisionIndex = -1;
     let currentDirection = 'for';
-    let factorsExpanded = true;
+    let factorsListExpanded = true;
+    let addFormExpanded = false;
 
     function loadData() {
       const saved = localStorage.getItem('thinkingInOddsDecisions');
-      if (saved) {
-        decisions = JSON.parse(saved);
-      }
-      if (decisions.length === 0) {
-        createNewDecision();
-      }
+      if (saved) decisions = JSON.parse(saved);
+      if (decisions.length === 0) createNewDecision();
       renderDecisionsList();
-      if (decisions.length > 0) {
-        selectDecision(0);
-      }
+      if (decisions.length > 0) selectDecision(0);
     }
 
     function saveData() {
@@ -268,17 +265,14 @@
 
     function createNewDecision() {
       const name = prompt("Enter a name for your new decision:") || `Decision ${decisions.length + 1}`;
-      decisions.push({
-        name: name,
-        factors: []
-      });
+      decisions.push({ name, factors: [], odds: null });
       saveData();
       renderDecisionsList();
       selectDecision(decisions.length - 1);
     }
 
     function deleteDecision(index) {
-      if (confirm(`Delete "${decisions[index].name}"? This cannot be undone.`)) {
+      if (confirm(`Delete "${decisions[index].name}"?`)) {
         decisions.splice(index, 1);
         saveData();
         renderDecisionsList();
@@ -286,10 +280,8 @@
           currentDecisionIndex = -1;
           document.getElementById('editorSection').style.display = 'none';
           createNewDecision();
-        } else if (currentDecisionIndex >= decisions.length) {
-          selectDecision(decisions.length - 1);
         } else {
-          selectDecision(currentDecisionIndex);
+          selectDecision(Math.min(currentDecisionIndex, decisions.length - 1));
         }
       }
     }
@@ -304,32 +296,36 @@
     function renderDecisionsList() {
       const list = document.getElementById('decisionsList');
       if (decisions.length === 0) {
-        list.innerHTML = '<p class="empty-message">No decisions yet. Create one!</p>';
+        list.innerHTML = '<p class="empty-message">No decisions yet. Tap + to create one!</p>';
         return;
       }
       list.innerHTML = decisions.map((d, i) => `
         <div class="decision-item ${i === currentDecisionIndex ? 'active' : ''}" onclick="selectDecision(${i})">
           <div class="decision-info">
             <strong>${d.name}</strong><br>
-            <small>${d.factors.length} factor${d.factors.length === 1 ? '' : 's'}</small>
+            <small>${d.factors.length} factor${d.factors.length === 1 ? '' : 's'}
+              ${d.odds !== null ? `<span class="decision-odds">• ${d.odds.toFixed(1)}%</span>` : ''}
+            </small>
           </div>
-          <button class="delete-decision-btn" onclick="event.stopPropagation(); deleteDecision(${i})">Delete</button>
+          <button class="delete-decision-btn" onclick="event.stopPropagation(); deleteDecision(${i})">🗑️</button>
         </div>
       `).join('');
     }
 
     function renderCurrentDecision() {
       if (currentDecisionIndex < 0) return;
-      const decision = decisions[currentDecisionIndex];
-      document.getElementById('decisionName').value = decision.name;
+      const d = decisions[currentDecisionIndex];
+      document.getElementById('decisionName').value = d.name;
       renderFactors();
       updateFactorCount();
       hideResult();
+      addFormExpanded = false;
+      document.getElementById('addFormContent').classList.add('collapsed');
     }
 
     function setDirection(dir) {
       currentDirection = dir;
-      document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
       document.querySelector(`.toggle-btn.${dir}`).classList.add('active');
     }
 
@@ -341,25 +337,17 @@
       if (currentDecisionIndex < 0) return;
       const name = document.getElementById('factorName').value.trim();
       const strength = parseFloat(document.getElementById('likelihood').value);
-      const weightStr = document.getElementById('weight').value;
-      const weight = weightStr ? parseFloat(weightStr) : 1.0;
+      const weight = document.getElementById('weight').value ? parseFloat(document.getElementById('weight').value) : 1.0;
 
-      if (!name) {
-        alert("Please enter a factor name.");
-        return;
-      }
-      if (isNaN(weight) || weight < 0) {
-        alert("Weight must be a positive number.");
-        return;
-      }
+      if (!name) return alert("Please enter a factor name.");
+      if (weight < 0) return alert("Weight must be positive.");
 
-      decisions[currentDecisionIndex].factors.push({
-        name, strength, weight, direction: currentDirection
-      });
+      decisions[currentDecisionIndex].factors.push({ name, strength, weight, direction: currentDirection });
       saveData();
       renderFactors();
       updateFactorCount();
       clearAddForm();
+      toggleAddForm(); // collapse after adding
     }
 
     function clearAddForm() {
@@ -375,7 +363,9 @@
       saveData();
       renderFactors();
       updateFactorCount();
+      decisions[currentDecisionIndex].odds = null; // reset odds
       hideResult();
+      renderDecisionsList();
     }
 
     function updateFactorCount() {
@@ -386,7 +376,7 @@
       const list = document.getElementById('factorsList');
       const factors = decisions[currentDecisionIndex]?.factors || [];
       if (factors.length === 0) {
-        list.innerHTML = '<p class="empty-message">No factors yet. Add one above!</p>';
+        list.innerHTML = '<p class="empty-message">No factors yet. Tap + below to add one!</p>';
         return;
       }
       list.innerHTML = factors.map((f, i) => `
@@ -401,11 +391,11 @@
       `).join('');
     }
 
-    function toggleFactors() {
+    function toggleFactorsList() {
       const content = document.getElementById('factorsContent');
-      const arrow = document.getElementById('arrow');
-      factorsExpanded = !factorsExpanded;
-      if (factorsExpanded) {
+      const arrow = document.getElementById('factorsArrow');
+      factorsListExpanded = !factorsListExpanded;
+      if (factorsListExpanded) {
         content.classList.remove('collapsed');
         arrow.classList.add('down');
       } else {
@@ -414,10 +404,19 @@
       }
     }
 
+    function toggleAddForm() {
+      const content = document.getElementById('addFormContent');
+      addFormExpanded = !addFormExpanded;
+      if (addFormExpanded) {
+        content.classList.remove('collapsed');
+      } else {
+        content.classList.add('collapsed');
+      }
+    }
+
     function calculateOdds() {
       if (currentDecisionIndex < 0 || decisions[currentDecisionIndex].factors.length === 0) {
-        alert("Add at least one factor first!");
-        return;
+        return alert("Add at least one factor first!");
       }
 
       let adjustment = 0;
@@ -429,6 +428,7 @@
       let overall = 50 + adjustment * 50;
       overall = Math.max(0, Math.min(100, overall));
 
+      decisions[currentDecisionIndex].odds = overall;
       const name = document.getElementById('decisionName').value.trim() || decisions[currentDecisionIndex].name;
       decisions[currentDecisionIndex].name = name;
       saveData();
@@ -451,7 +451,7 @@
 
     document.getElementById('decisionName').addEventListener('change', () => {
       if (currentDecisionIndex >= 0) {
-        decisions[currentDecisionIndex].name = document.getElementById('decisionName').value.trim() || "Untitled Decision";
+        decisions[currentDecisionIndex].name = document.getElementById('decisionName').value.trim() || "Untitled";
         saveData();
         renderDecisionsList();
       }
